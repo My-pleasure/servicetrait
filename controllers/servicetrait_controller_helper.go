@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/crossplane/oam-kubernetes-runtime/pkg/oam"
-	"k8s.io/apimachinery/pkg/types"
-	sts "servicetrait/pkg/trait/service"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	corev1alpha1 "servicetrait/api/v1alpha1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	corev1alpha1 "servicetrait/api/v1alpha1"
+	sts "servicetrait/pkg/trait/service"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	KindService = "Service"
+	KindService     = "Service"
 	KindStatefulSet = "StatefulSet"
 )
 

@@ -18,7 +18,7 @@ const (
 const LabelKey = "workload.oam.crossplane.io"
 
 var (
-	serviceKind =reflect.TypeOf(corev1.Service{}).Name()
+	serviceKind       = reflect.TypeOf(corev1.Service{}).Name()
 	serviceAPIVersion = corev1.SchemeGroupVersion.String()
 )
 
@@ -46,7 +46,7 @@ func ServiceInjector(ctx context.Context, t oam.Trait, objs []oam.Object) ([]oam
 				APIVersion: serviceAPIVersion,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: set.GetName(),
+				Name:      set.GetName(),
 				Namespace: set.GetNamespace(),
 				Labels: map[string]string{
 					LabelKey: string(t.GetUID()),
@@ -54,8 +54,8 @@ func ServiceInjector(ctx context.Context, t oam.Trait, objs []oam.Object) ([]oam
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: set.Spec.Selector.MatchLabels,
-				Ports: []corev1.ServicePort{},
-				Type: corev1.ServiceTypeClusterIP,
+				Ports:    []corev1.ServicePort{},
+				Type:     corev1.ServiceTypeClusterIP,
 			},
 		}
 

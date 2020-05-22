@@ -1,7 +1,0 @@
-apiVersion: core.oam.dev/v1alpha1
-kind: ServiceTrait
-metadata:
-  name: servicetrait-sample
-spec:
-  # Add fields here
-  foo: bar
