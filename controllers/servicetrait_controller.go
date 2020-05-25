@@ -134,11 +134,9 @@ func (r *ServiceTraitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 
 func (r *ServiceTraitReconciler) createService(ctx context.Context, service corev1alpha2.ServiceTrait,
 	resources []*unstructured.Unstructured) (*corev1.Service, error) {
-	found := false
 	// Change unstructured to object
 	for _, res := range resources {
 		if res.GetKind() == KindStatefulSet && res.GetAPIVersion() == appsv1.SchemeGroupVersion.String() {
-			found = true
 			r.Log.Info("Get the statefulset the trait is going to create a service for it",
 				"statefulset name", res.GetName(), "UID", res.GetUID())
 			// convert the unstructured to statefulset and create a service
@@ -158,13 +156,10 @@ func (r *ServiceTraitReconciler) createService(ctx context.Context, service core
 			return svc, nil
 		}
 	}
-	if !found {
-		r.Log.Info("Cannot locate any statefulset", "total resources", len(resources))
-		service.Status.SetConditions(cpv1alpha1.ReconcileError(fmt.Errorf(errLocateStatefulSet)))
-		return nil, errors.Wrap(r.Status().Update(ctx, &service),
-			errUpdateStatus)
-	}
-	return nil, nil
+	r.Log.Info("Cannot locate any statefulset", "total resources", len(resources))
+	service.Status.SetConditions(cpv1alpha1.ReconcileError(fmt.Errorf(errLocateStatefulSet)))
+	return nil, errors.Wrap(r.Status().Update(ctx, &service),
+		errUpdateStatus)
 }
 
 func (r *ServiceTraitReconciler) fetchWorkload(ctx context.Context,
