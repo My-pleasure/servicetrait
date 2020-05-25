@@ -89,6 +89,8 @@ github.com/crossplane/addon-oam-kubernetes-local v0.0.0-20200519023759-42e82c49f
 github.com/crossplane/addon-oam-kubernetes-local v0.0.0-20200519023759-42e82c49fb67/go.mod h1:UKhex91y0xVBmGJN8bipUi5zjxU8L0a+1KufMVjpoQg=
 github.com/crossplane/crossplane-runtime v0.8.0 h1:IBm5LWVeqB2BjHpkykURHY0PSozXWfIXk7LfWtr27wY=
 github.com/crossplane/crossplane-runtime v0.8.0/go.mod h1:gNY/21MLBaz5KNP7hmfXbBXp8reYRbwY5B/97Kp4tgM=
+github.com/crossplane/crossplane-runtime v0.9.0 h1:K6/tLhXKzhsEUUddTvEWWnQLLrawWyw1ptNK7NBDpDU=
+github.com/crossplane/crossplane-runtime v0.9.0/go.mod h1:gNY/21MLBaz5KNP7hmfXbBXp8reYRbwY5B/97Kp4tgM=
 github.com/crossplane/crossplane-tools v0.0.0-20200219001116-bb8b2ce46330/go.mod h1:C735A9X0x0lR8iGVOOxb49Mt70Ua4EM2b7PGaRPBLd4=
 github.com/crossplane/oam-kubernetes-runtime v0.0.0-20200517004843-11d4a899ed79/go.mod h1:Rdyrn3sdZ7eWiSg38lp2DT/zSO5oo2mBXXJB9M2NUFg=
 github.com/crossplane/oam-kubernetes-runtime v0.0.1 h1:ZRmHfgP/H5LSgBo2fvKJnOa+3v/7uTAENN4oktIZ20M=

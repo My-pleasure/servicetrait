@@ -3,7 +3,8 @@ module servicetrait
 go 1.13
 
 require (
-	github.com/crossplane/crossplane-runtime v0.8.0
+	//github.com/My-pleaseure/statefulsetworkload v0.0.0-00010101000000-000000000000
+	github.com/crossplane/crossplane-runtime v0.9.0
 	github.com/crossplane/oam-controllers v0.0.0-00010101000000-000000000000
 	github.com/crossplane/oam-kubernetes-runtime v0.0.1
 	github.com/go-logr/logr v0.1.0
@@ -17,3 +18,5 @@ require (
 )
 
 replace github.com/crossplane/oam-controllers => github.com/crossplane/addon-oam-kubernetes-local v0.0.0-20200519023759-42e82c49fb67
+
+//replace github.com/My-pleaseure/statefulsetworkload => ../statefulsetworkload

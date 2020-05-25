@@ -25,6 +25,8 @@ import (
 	"github.com/crossplane/oam-kubernetes-runtime/pkg/oam"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 
@@ -64,7 +66,7 @@ type ServiceTraitReconciler struct {
 // +kubebuilder:rbac:groups=core.oam.dev,resources=statefulsetworkloads,verbs=get;list;
 // +kubebuilder:rbac:groups=core.oam.dev,resources=statefulsetworkloads/status,verbs=get;
 // +kubebuilder:rbac:groups=core.oam.dev,resources=workloaddefinition,verbs=get;list;
-// +kubebuilder:rbac:groups=apps,resources=statefulset,verbs=get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 
 func (r *ServiceTraitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
@@ -186,5 +188,7 @@ func (r *ServiceTraitReconciler) fetchWorkload(ctx context.Context,
 func (r *ServiceTraitReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1alpha2.ServiceTrait{}).
+		Owns(&appsv1.StatefulSet{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Owns(&corev1.Service{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
