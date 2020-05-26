@@ -9,7 +9,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	corev1alpha2 "servicetrait/api/v1alpha2"
-	sts "servicetrait/pkg/trait/service"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,7 +23,7 @@ const (
 func (r *ServiceTraitReconciler) renderService(ctx context.Context,
 	trait *corev1alpha2.ServiceTrait, set *appsv1.StatefulSet) (*corev1.Service, error) {
 	// create a service for the servicetrait
-	resources, err := sts.ServiceInjector(ctx, trait, []oam.Object{set})
+	resources, err := ServiceInjector(ctx, trait, []oam.Object{set})
 	if err != nil {
 		return nil, err
 	}
