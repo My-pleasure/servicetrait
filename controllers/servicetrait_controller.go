@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -40,16 +38,12 @@ import (
 	corev1alpha2 "servicetrait/api/v1alpha2"
 )
 
-const (
-	oamReconcileWait = 30 * time.Second
-)
-
 // Reconcile error strings.
 const (
 	errLocateWorkload    = "cannot find workload"
 	errLocateResources   = "cannot find resources"
-	errUpdateStatus      = "cannot apply status"
 	errLocateStatefulSet = "cannot find statefulset"
+	errRenderService     = "cannot render service"
 	errApplyService      = "cannot apply the service"
 	errGCService         = "cannot clean up stale services"
 )
@@ -61,7 +55,7 @@ type ServiceTraitReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=core.oam.dev,resources=servicetraits,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core.oam.dev,resources=servicetraits,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=core.oam.dev,resources=servicetraits/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=core.oam.dev,resources=statefulsetworkloads,verbs=get;list;
 // +kubebuilder:rbac:groups=core.oam.dev,resources=statefulsetworkloads/status,verbs=get;
@@ -74,65 +68,64 @@ func (r *ServiceTraitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	log := r.Log.WithValues("servicetrait", req.NamespacedName)
 	log.Info("Reconcile Service Trait")
 
-	var service corev1alpha2.ServiceTrait
-	if err := r.Get(ctx, req.NamespacedName, &service); err != nil {
+	var trait corev1alpha2.ServiceTrait
+	if err := r.Get(ctx, req.NamespacedName, &trait); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	log.Info("Get the service trait", "WorkloadReference", service.Spec.WorkloadReference)
+	log.Info("Get the service trait", "WorkloadReference", trait.Spec.WorkloadReference)
 
 	// Fetch the workload this trait is referring to
-	workload, result, err := r.fetchWorkload(ctx, &service)
+	workload, result, err := r.fetchWorkload(ctx, log, &trait)
 	if err != nil {
 		return result, err
 	}
 
 	// Fetch the child resources list from the corresponding workload
-	resources, err := util.FetchWorkloadDefinition(ctx, r, workload)
+	resources, err := util.FetchWorkloadDefinition(ctx, log, r, workload)
 	if err != nil {
 		r.Log.Error(err, "Cannot find the workload child resources", "workload", workload.UnstructuredContent())
-		service.Status.SetConditions(cpv1alpha1.ReconcileError(fmt.Errorf(errLocateResources)))
-		return ctrl.Result{RequeueAfter: oamReconcileWait}, errors.Wrap(r.Status().Update(ctx, &service),
-			errUpdateStatus)
+		return util.ReconcileWaitResult,
+			util.PatchCondition(ctx, r, &trait, cpv1alpha1.ReconcileError(fmt.Errorf(errLocateResources)))
 	}
 
 	// Create a service for the child resources we know
-	svc, err := r.createService(ctx, service, resources)
+	svc, err := r.createService(ctx, trait, resources)
 	if err != nil {
 		return result, err
 	}
 
 	// server side apply the service, only the fields we set are touched
-	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(service.Name)}
+	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner(trait.Name)}
 	if err := r.Patch(ctx, svc, client.Apply, applyOpts...); err != nil {
-		service.Status.SetConditions(cpv1alpha1.ReconcileError(errors.Wrap(err, errApplyService)))
 		r.Log.Error(err, "Failed to apply a service")
-		return reconcile.Result{RequeueAfter: oamReconcileWait}, errors.Wrap(r.Status().Update(ctx, &service),
-			errUpdateStatus)
+		return util.ReconcileWaitResult,
+			util.PatchCondition(ctx, r, &trait, cpv1alpha1.ReconcileError(errors.Wrap(err, errApplyService)))
 	}
 	r.Log.Info("Successfully applied a service", "UID", svc.UID)
 
 	// garbage collect the service that we created but not needed
-	if err := r.cleanupResources(ctx, &service, &svc.UID); err != nil {
-		service.Status.SetConditions(cpv1alpha1.ReconcileError(errors.Wrap(err, errGCService)))
+	if err := r.cleanupResources(ctx, &trait, &svc.UID); err != nil {
 		r.Log.Error(err, "Failed to clean up resources")
-		return reconcile.Result{RequeueAfter: oamReconcileWait}, errors.Wrap(r.Status().Update(ctx, &service),
-			errUpdateStatus)
+		return util.ReconcileWaitResult,
+			util.PatchCondition(ctx, r, &trait, cpv1alpha1.ReconcileError(errors.Wrap(err, errGCService)))
 	}
-	service.Status.Resources = nil
+	trait.Status.Resources = nil
 	// record the new service
-	service.Status.Resources = append(service.Status.Resources, cpv1alpha1.TypedReference{
+	trait.Status.Resources = append(trait.Status.Resources, cpv1alpha1.TypedReference{
 		APIVersion: svc.GetObjectKind().GroupVersionKind().GroupVersion().String(),
 		Kind:       svc.GetObjectKind().GroupVersionKind().Kind,
 		Name:       svc.GetName(),
 		UID:        svc.GetUID(),
 	})
 
-	service.Status.SetConditions(cpv1alpha1.ReconcileSuccess())
+	if err := r.Status().Update(ctx, &trait); err != nil {
+		return util.ReconcileWaitResult, err
+	}
 
-	return ctrl.Result{}, errors.Wrap(r.Status().Update(ctx, &service), errUpdateStatus)
+	return ctrl.Result{}, util.PatchCondition(ctx, r, &trait, cpv1alpha1.ReconcileSuccess())
 }
 
-func (r *ServiceTraitReconciler) createService(ctx context.Context, service corev1alpha2.ServiceTrait,
+func (r *ServiceTraitReconciler) createService(ctx context.Context, serviceTr corev1alpha2.ServiceTrait,
 	resources []*unstructured.Unstructured) (*corev1.Service, error) {
 	// Change unstructured to object
 	for _, res := range resources {
@@ -147,36 +140,33 @@ func (r *ServiceTraitReconciler) createService(ctx context.Context, service core
 				continue
 			}
 			// Create a service for the workload which this trait is referring to
-			svc, err := r.renderService(ctx, &service, &ss)
+			svc, err := r.renderService(ctx, &serviceTr, &ss)
 			if err != nil {
 				r.Log.Error(err, "Failed to render a service")
-				return nil, errors.Wrap(r.Status().Update(ctx, &service),
-					errUpdateStatus)
+				return nil, util.PatchCondition(ctx, r, &serviceTr, cpv1alpha1.ReconcileError(errors.Wrap(err, errRenderService)))
 			}
 			return svc, nil
 		}
 	}
 	r.Log.Info("Cannot locate any statefulset", "total resources", len(resources))
-	service.Status.SetConditions(cpv1alpha1.ReconcileError(fmt.Errorf(errLocateStatefulSet)))
-	return nil, errors.Wrap(r.Status().Update(ctx, &service),
-		errUpdateStatus)
+	return nil, util.PatchCondition(ctx, r, &serviceTr, cpv1alpha1.ReconcileError(fmt.Errorf(errLocateStatefulSet)))
 }
 
-func (r *ServiceTraitReconciler) fetchWorkload(ctx context.Context,
+func (r *ServiceTraitReconciler) fetchWorkload(ctx context.Context, log logr.Logger,
 	oamTrait oam.Trait) (*unstructured.Unstructured, ctrl.Result, error) {
 	var workload unstructured.Unstructured
 	workload.SetAPIVersion(oamTrait.GetWorkloadReference().APIVersion)
 	workload.SetKind(oamTrait.GetWorkloadReference().Kind)
 	wn := client.ObjectKey{Name: oamTrait.GetWorkloadReference().Name, Namespace: oamTrait.GetNamespace()}
 	if err := r.Get(ctx, wn, &workload); err != nil {
-		oamTrait.SetConditions(cpv1alpha1.ReconcileError(errors.Wrap(err, errLocateWorkload)))
-		r.Log.Error(err, "Workload not find", "kind", oamTrait.GetWorkloadReference().Kind,
+		log.Error(err, "Workload not find", "kind", oamTrait.GetWorkloadReference().Kind,
 			"workload name", oamTrait.GetWorkloadReference().Name)
-		return nil, ctrl.Result{RequeueAfter: oamReconcileWait}, errors.Wrap(r.Status().Update(ctx, oamTrait),
-			errUpdateStatus)
+		return nil, util.ReconcileWaitResult,
+			util.PatchCondition(ctx, r, oamTrait, cpv1alpha1.ReconcileError(errors.Wrap(err, errLocateWorkload)))
 	}
-	r.Log.Info("Get the workload the trait is pointing to", "workload name", oamTrait.GetWorkloadReference().Name,
-		"UID", workload.GetUID())
+	log.Info("Get the workload the trait is pointing to", "workload name", oamTrait.GetWorkloadReference().Name,
+		"workload APIVersion", workload.GetAPIVersion(), "workload Kind", workload.GetKind(), "workload UID",
+		workload.GetUID())
 	return &workload, ctrl.Result{}, nil
 }
 

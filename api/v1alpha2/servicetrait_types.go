@@ -17,16 +17,41 @@ limitations under the License.
 package v1alpha2
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	runtimev1alpha1 "github.com/crossplane/crossplane-runtime/apis/core/v1alpha1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+type ServicePort struct {
+	// The port that will be exposed by this service
+	// Default is same as TargetPort
+	// +optional
+	Port int32 `json:"port,omitempty"`
+
+	// The port on each node on which this service is exposed when type=NodePort or LoadBalancer.
+	// +optional
+	NodePort int32 `json:"nodePort,omitempty"`
+}
 
 // ServiceTraitSpec defines the desired state of ServiceTrait
 type ServiceTraitSpec struct {
+	// You can choose Type: ClusterIP、LoadBalancer、NodePort、ExternalName
+	// Default is LoadBalancer
+	// +optional
+	Type corev1.ServiceType `json:"type,omitempty"`
+
+	// You can specify IP address or "None" to create headless service
+	// Default is assigned randomly by the master
+	// +optional
+	ClusterIP string `json:"clusterIP,omitempty"`
+
+	// Requires Type to be ExternalName.
+	// +optional
+	ExternalName string `json:"externalName,omitempty"`
+
+	Ports ServicePort `json:"ports,omitempty"`
+
 	// WorkloadReference to the workload this trait applies to.
 	WorkloadReference runtimev1alpha1.TypedReference `json:"workloadRef"`
 }

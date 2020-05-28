@@ -22,6 +22,7 @@ const (
 // create a service for the statefulset
 func (r *ServiceTraitReconciler) renderService(ctx context.Context,
 	trait *corev1alpha2.ServiceTrait, set *appsv1.StatefulSet) (*corev1.Service, error) {
+
 	// create a service for the servicetrait
 	resources, err := ServiceInjector(ctx, trait, []oam.Object{set})
 	if err != nil {

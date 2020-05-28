@@ -39,6 +39,30 @@ spec:
         spec:
           description: ServiceTraitSpec defines the desired state of ServiceTrait
           properties:
+            clusterIP:
+              description: You can specify IP address or "None" to create headless
+                service Default is assigned randomly by the master
+              type: string
+            externalName:
+              description: Requires Type to be ExternalName.
+              type: string
+            ports:
+              properties:
+                nodePort:
+                  description: The port on each node on which this service is exposed
+                    when type=NodePort or LoadBalancer.
+                  format: int32
+                  type: integer
+                port:
+                  description: The port that will be exposed by this service Default
+                    is same as TargetPort
+                  format: int32
+                  type: integer
+              type: object
+            type:
+              description: 'You can choose Type: ClusterIP、LoadBalancer、NodePort、ExternalName
+                Default is LoadBalancer'
+              type: string
             workloadRef:
               description: WorkloadReference to the workload this trait applies to.
               properties:

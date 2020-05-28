@@ -16,3 +16,5 @@ spec:
             kind: ServiceTrait
             metadata:
               name:  example-appconfig-trait
+            spec:
+              type: ClusterIP
