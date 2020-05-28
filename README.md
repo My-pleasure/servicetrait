@@ -1,44 +1,23 @@
 # ServiceTrait
-Run OAM ServiceTrait on a Kubernetes cluster, like ManualScalerTrait.
+You can use ServiceTrait to create a service for the workload on a Kubernetes cluster, like [ManualScalerTrait](https://github.com/oam-dev/spec/blob/master/core/traits/manual_scaler_trait.md).
 # How to use it
-- Install OAM Application Controller and OAM Core workload and trait controller. (You can also follow [addon-oam-kubernetes-local](https://github.com/crossplane/addon-oam-kubernetes-local))
-```
-kubectl create namespace crossplane-system
-
-helm repo add crossplane-alpha https://charts.crossplane.io/alpha
-
-helm install crossplane --namespace crossplane-system crossplane-alpha/crossplane
-
-git clone git@github.com:crossplane/addon-oam-kubernetes-local.git
-
-kubectl create namespace oam-system
-
-helm install controller -n oam-system ./charts/oam-core-resources/ 
-```
-- Install statefulsetworkload controller.
+- At first, you should follow [addon-oam-kubernetes-local](https://github.com/crossplane/addon-oam-kubernetes-local). And install OAM Application Controller and OAM Core workload and trait controller.
+- Then, you should deploy a StatefulSetWorkload controller by following [statefulsetworkload](https://github.com/My-pleasure/statefulsetworkload#getting-started).
+- Get the Servicetrait project to your GOPATH
 ```
 git clone https://github.com/My-pleasure/statefulsetworkload.git
-
-cd $GOPATH/src/statefulsetworkload
-
-make docker-build IMG=<project-name>:tag  # eg:statefulsetworkload:v0.2
-
-make deploy IMG=<project-name>:tag
-
-# if you use kind to create kubernetes cluster, you should load IMG to kind cluster
-kind load docker-image <project-name>:tag
 ```
-- Run servicetrait controller.
+- Fetch the servicetrait image
 ```
-git clone -b v1alpha2 https://github.com/My-pleasure/servicetrait.git
-
-cd $GOPATH/src/servicetrait
-
-make install
-
-make run
+docker pull chienwong/servicetrait:v0.6
 ```
-- Apply the samples
+- Deploy the servicetrait controller.
+```
+cd servicetrait/
+
+make deploy IMG=servicetrait:v0.6
+```
+- Apply the sample application config
 ```
 kubectl apply -f config/samples/
 ```
@@ -51,6 +30,8 @@ example-appconfig-workload   1/1     19s
   And a service looking like below
 ```
 kubectl get service
-NAME                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-example-appconfig-workload   ClusterIP   10.107.41.172   <none>        80/TCP    23s
+NAME                             TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+example-appconfig-workload-svc   ClusterIP   10.107.41.172   <none>        80/TCP    23s
 ```
+# Future work
+Now the ServiceTrait can only create a service for the StatefulSetWorkload, and it will support more workloads like ContainerizedWorkload in the future.
