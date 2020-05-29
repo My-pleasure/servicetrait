@@ -1,6 +1,6 @@
 # ServiceTrait
 You can use ServiceTrait to create a service for the workload on a Kubernetes cluster, like [ManualScalerTrait](https://github.com/oam-dev/spec/blob/master/core/traits/manual_scaler_trait.md).
-# How to use it
+# Getting started
 - At first, you should follow [addon-oam-kubernetes-local](https://github.com/crossplane/addon-oam-kubernetes-local). And install OAM Application Controller and OAM Core workload and trait controller.
 - Then, you should deploy a StatefulSetWorkload controller by following [statefulsetworkload](https://github.com/My-pleasure/statefulsetworkload#getting-started).
 - Get the Servicetrait project to your GOPATH
