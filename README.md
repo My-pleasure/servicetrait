@@ -15,7 +15,7 @@ docker pull chienwong/servicetrait:v0.6
 ```
 cd servicetrait/
 
-make deploy IMG=servicetrait:v0.6
+make deploy IMG=chienwong/servicetrait:v0.6
 ```
 - Apply the sample application config
 ```
