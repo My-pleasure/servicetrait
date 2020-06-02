@@ -17,4 +17,4 @@ spec:
             metadata:
               name:  example-appconfig-trait
             spec:
-              type: ClusterIP
+              type: NodePort

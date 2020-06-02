@@ -37,71 +37,147 @@ func ServiceInjector(ctx context.Context, trait oam.Trait, objs []oam.Object) ([
 	}
 
 	for _, o := range objs {
-		set, ok := o.(*appsv1.StatefulSet)
-		if !ok {
-			continue
+		if o.GetObjectKind().GroupVersionKind().Kind == KindStatefulSet {
+			svc := injectStatefulSet(t, o)
+			objs = append(objs, svc)
+		} else if o.GetObjectKind().GroupVersionKind().Kind == KindDeployment {
+			svc := injectDeployment(t, o)
+			objs = append(objs, svc)
 		}
-
-		// We don't add a Service if there are no containers for the StatefulSet.
-		// This should never happen in practice.
-		if len(set.Spec.Template.Spec.Containers) < 1 {
-			continue
-		}
-
-		svc := &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       serviceKind,
-				APIVersion: serviceAPIVersion,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      set.GetName() + "-svc",
-				Namespace: set.GetNamespace(),
-				Labels: map[string]string{
-					LabelKey: string(t.GetUID()),
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Selector: set.Spec.Selector.MatchLabels,
-				Ports:    []corev1.ServicePort{},
-			},
-		}
-
-		if t.Spec.Type != "" {
-			svc.Spec.Type = t.Spec.Type
-		} else {
-			svc.Spec.Type = corev1.ServiceTypeLoadBalancer
-		}
-
-		if t.Spec.ClusterIP != "" {
-			svc.Spec.ClusterIP = t.Spec.ClusterIP
-		}
-
-		if t.Spec.ExternalName != "" {
-			svc.Spec.ExternalName = t.Spec.ExternalName
-		}
-
-		// We only add a single Service for the StatefulSet, even if multiple
-		// ports or no ports are defined on the first container. This is to
-		// exclude the need for implementing garbage collection in the
-		// short-term in the case that ports are modified after creation.
-		if len(set.Spec.Template.Spec.Containers[0].Ports) > 0 {
-			svc.Spec.Ports = []corev1.ServicePort{
-				{
-					Name:       set.GetName(),
-					Port:       set.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort,
-					TargetPort: intstr.FromInt(int(set.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)),
-				},
-			}
-			if t.Spec.Ports.Port != 0 {
-				svc.Spec.Ports[0].Port = t.Spec.Ports.Port
-			}
-			if t.Spec.Ports.NodePort != 0 {
-				svc.Spec.Ports[0].NodePort = t.Spec.Ports.NodePort
-			}
-		}
-		objs = append(objs, svc)
 		break
 	}
 
 	return objs, nil
+}
+
+func injectStatefulSet(t *corev1alpha2.ServiceTrait, o oam.Object) *corev1.Service {
+	set, ok := o.(*appsv1.StatefulSet)
+	if !ok {
+		return nil
+	}
+
+	// We don't add a Service if there are no containers for the StatefulSet.
+	// This should never happen in practice.
+	if len(set.Spec.Template.Spec.Containers) < 1 {
+		return nil
+	}
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       serviceKind,
+			APIVersion: serviceAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      set.GetName() + "-svc",
+			Namespace: set.GetNamespace(),
+			Labels: map[string]string{
+				LabelKey: string(t.GetUID()),
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: set.Spec.Selector.MatchLabels,
+			Ports:    []corev1.ServicePort{},
+		},
+	}
+
+	if t.Spec.Type != "" {
+		svc.Spec.Type = t.Spec.Type
+	} else {
+		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
+	}
+
+	if t.Spec.ClusterIP != "" {
+		svc.Spec.ClusterIP = t.Spec.ClusterIP
+	}
+
+	if t.Spec.ExternalName != "" {
+		svc.Spec.ExternalName = t.Spec.ExternalName
+	}
+
+	// We only add a single Service for the StatefulSet, even if multiple
+	// ports or no ports are defined on the first container. This is to
+	// exclude the need for implementing garbage collection in the
+	// short-term in the case that ports are modified after creation.
+	if len(set.Spec.Template.Spec.Containers[0].Ports) > 0 {
+		svc.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:       set.GetName(),
+				Port:       set.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort,
+				TargetPort: intstr.FromInt(int(set.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)),
+			},
+		}
+		if t.Spec.Ports.Port != 0 {
+			svc.Spec.Ports[0].Port = t.Spec.Ports.Port
+		}
+		if t.Spec.Ports.NodePort != 0 {
+			svc.Spec.Ports[0].NodePort = t.Spec.Ports.NodePort
+		}
+	}
+	return svc
+}
+
+func injectDeployment(t *corev1alpha2.ServiceTrait, o oam.Object) *corev1.Service {
+	deploy, ok := o.(*appsv1.Deployment)
+	if !ok {
+		return nil
+	}
+
+	// We don't add a Service if there are no containers for the StatefulSet.
+	// This should never happen in practice.
+	if len(deploy.Spec.Template.Spec.Containers) < 1 {
+		return nil
+	}
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       serviceKind,
+			APIVersion: serviceAPIVersion,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deploy.GetName() + "-svc",
+			Namespace: deploy.GetNamespace(),
+			Labels: map[string]string{
+				LabelKey: string(t.GetUID()),
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: deploy.Spec.Selector.MatchLabels,
+			Ports:    []corev1.ServicePort{},
+		},
+	}
+
+	if t.Spec.Type != "" {
+		svc.Spec.Type = t.Spec.Type
+	} else {
+		svc.Spec.Type = corev1.ServiceTypeLoadBalancer
+	}
+
+	if t.Spec.ClusterIP != "" {
+		svc.Spec.ClusterIP = t.Spec.ClusterIP
+	}
+
+	if t.Spec.ExternalName != "" {
+		svc.Spec.ExternalName = t.Spec.ExternalName
+	}
+
+	// We only add a single Service for the StatefulSet, even if multiple
+	// ports or no ports are defined on the first container. This is to
+	// exclude the need for implementing garbage collection in the
+	// short-term in the case that ports are modified after creation.
+	if len(deploy.Spec.Template.Spec.Containers[0].Ports) > 0 {
+		svc.Spec.Ports = []corev1.ServicePort{
+			{
+				Name:       deploy.GetName(),
+				Port:       deploy.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort,
+				TargetPort: intstr.FromInt(int(deploy.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort)),
+			},
+		}
+		if t.Spec.Ports.Port != 0 {
+			svc.Spec.Ports[0].Port = t.Spec.Ports.Port
+		}
+		if t.Spec.Ports.NodePort != 0 {
+			svc.Spec.Ports[0].NodePort = t.Spec.Ports.NodePort
+		}
+	}
+	return svc
 }
