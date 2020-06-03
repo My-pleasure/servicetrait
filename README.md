@@ -11,7 +11,7 @@ Supported resources:
 - Then, you should deploy a StatefulSetWorkload controller by following [statefulsetworkload](https://github.com/My-pleasure/statefulsetworkload#getting-started).
 - Get the Servicetrait project to your GOPATH
 ```
-git clone https://github.com/My-pleasure/statefulsetworkload.git
+git clone https://github.com/My-pleasure/servicetrait.git
 ```
 - Fetch the servicetrait image
 ```
