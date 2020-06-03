@@ -40,11 +40,13 @@ func ServiceInjector(ctx context.Context, trait oam.Trait, objs []oam.Object) ([
 		if o.GetObjectKind().GroupVersionKind().Kind == KindStatefulSet {
 			svc := injectStatefulSet(t, o)
 			objs = append(objs, svc)
-		} else if o.GetObjectKind().GroupVersionKind().Kind == KindDeployment {
+			break
+		}
+		if o.GetObjectKind().GroupVersionKind().Kind == KindDeployment {
 			svc := injectDeployment(t, o)
 			objs = append(objs, svc)
+			break
 		}
-		break
 	}
 
 	return objs, nil

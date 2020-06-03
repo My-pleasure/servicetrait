@@ -139,11 +139,6 @@ func (r *ServiceTraitReconciler) createService(ctx context.Context, log logr.Log
 			if err != nil {
 				r.Log.Error(err, "Failed to determine the resource kind")
 			}
-			//var obj oam.Object
-			//bts, _ := json.Marshal(res)
-			//if err := json.Unmarshal(bts, obj); err != nil {
-			//	log.Error(err, "Failed to convert an unstructured to a object")
-			//}
 
 			// Create a service for the workload which this trait is referring to
 			svc, err := r.renderService(ctx, &serviceTr, obj)
