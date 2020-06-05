@@ -91,7 +91,7 @@ func (r *ServiceTraitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	}
 
 	// Create a service for the child resources we know
-	svc, err := r.createService(ctx, log, trait, resources)
+	svc, err := r.createService(ctx, trait, resources)
 	if err != nil {
 		return result, err
 	}
@@ -127,21 +127,15 @@ func (r *ServiceTraitReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error
 	return ctrl.Result{}, util.PatchCondition(ctx, r, &trait, cpv1alpha1.ReconcileSuccess())
 }
 
-func (r *ServiceTraitReconciler) createService(ctx context.Context, log logr.Logger,
-	serviceTr corev1alpha2.ServiceTrait, resources []*unstructured.Unstructured) (*corev1.Service, error) {
+func (r *ServiceTraitReconciler) createService(ctx context.Context, serviceTr corev1alpha2.ServiceTrait, resources []*unstructured.Unstructured) (*corev1.Service, error) {
 	for _, res := range resources {
 		// Determine whether APIVersion is "appsv1"
 		if res.GetAPIVersion() == appsv1.SchemeGroupVersion.String() {
 			r.Log.Info("Get the resources the trait is going to create a service for it",
 				"resources name", res.GetName(), "UID", res.GetUID())
-			// Determine the resource type
-			obj, err := DetermineResourceKind(log, res)
-			if err != nil {
-				r.Log.Error(err, "Failed to determine the resource kind")
-			}
 
 			// Create a service for the workload which this trait is referring to
-			svc, err := r.renderService(ctx, &serviceTr, obj)
+			svc, err := r.renderService(ctx, &serviceTr, res)
 			if err != nil {
 				r.Log.Error(err, "Failed to render a service")
 				return nil, util.PatchCondition(ctx, r, &serviceTr, cpv1alpha1.ReconcileError(errors.Wrap(err, errRenderService)))
